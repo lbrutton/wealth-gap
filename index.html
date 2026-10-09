@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:0}</style>
+</head>
+<body>
+<title>The Wealth Gap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: a war-room board. Wealth-share meter on top; left = map + country dossier (politics, sectors); right = top 10 roster + target dossier (kill / convert) + newswire. */
+:root{
+  --bg:#ECEEF2; --panel:#F8F9FB; --ink:#141A2E; --muted:#596178; --line:#CDD2DC;
+  --people:#2C4BD8; --tile:#A9B8EC; --gold:#B07D0A; --danger:#BE3227; --ok:#1F7A4D;
+  --fl:#B3245E; --l:#E07A9B; --c:#B9BDC9; --r:#6E9FC0; --fr:#22567A;
+  --display:"Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1220; --panel:#161B2C; --ink:#E5E8F1; --muted:#8E96AC; --line:#2A3046;
+  --people:#7D96FF; --tile:#34478F; --gold:#E2B444; --danger:#F06B5F; --ok:#4CC38A;
+  --fl:#E0508A; --l:#B05A78; --c:#5A6075; --r:#4F7EA0; --fr:#7FB6DE; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1220; --panel:#161B2C; --ink:#E5E8F1; --muted:#8E96AC; --line:#2A3046;
+  --people:#7D96FF; --tile:#34478F; --gold:#E2B444; --danger:#F06B5F; --ok:#4CC38A;
+  --fl:#E0508A; --l:#B05A78; --c:#5A6075; --r:#4F7EA0; --fr:#7FB6DE; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45}
+.wrap{max-width:1280px;margin:0 auto;padding-inline:16px;padding-block:18px 40px;display:grid;gap:14px}
+h1,h2,h3{font-family:var(--display);font-weight:800;letter-spacing:.01em;margin:0;text-wrap:balance;text-transform:uppercase}
+h3{font-size:16px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.note{color:var(--muted);font-size:12.5px}
+button{font:inherit;cursor:pointer}
+button:focus-visible,.tile:focus-visible,.island:focus-visible,.rich:focus-visible{outline:2px solid var(--people);outline-offset:2px}
+
+/* Top */
+.top{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:end}
+.brand h1{font-size:44px;line-height:.9;font-weight:900}
+.brand h1 span{color:var(--gold)}
+.brand .tag{display:block;margin-top:6px}
+.meter{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;min-width:0}
+.meter .big{font-family:var(--display);font-size:56px;line-height:.85;font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums}
+.bar{position:relative;height:22px;background:var(--tile);border-radius:3px}
+.bar .fill{position:absolute;inset:0 auto 0 0;background:var(--gold);border-radius:3px 0 0 3px;transition:width .5s}
+.bar .mark{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--ink)}
+.bar .mark b{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:.06em;white-space:nowrap;text-transform:uppercase;font-weight:600}
+.bar .mark.win b{color:var(--ok)} .bar .mark.lose b{color:var(--danger)}
+.bar-wrap{display:grid;gap:8px;min-width:0;padding-top:14px}
+.spark{width:150px;height:44px}
+
+/* HUD */
+.hud{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:center;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.hud .stat{display:grid;gap:2px}
+.hud .stat .num{font-size:18px;font-weight:600}
+.pips{display:flex;gap:4px;align-items:center;height:26px}
+.pip{width:14px;height:22px;border-radius:2px;background:var(--people)}
+.pip.empty{background:transparent;border:1.5px dashed var(--line)}
+.hud .spacer{flex:1}
+.end{background:var(--ink);color:var(--bg);border:0;border-radius:4px;padding:12px 20px;font-family:var(--display);font-size:20px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.end:hover{background:var(--people);color:#fff}
+
+/* Board */
+.board{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;align-items:start}
+.col{display:grid;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.card-head h2{font-size:22px}
+.sub{display:grid;gap:8px;margin-top:16px}
+
+#map{width:100%;height:auto;display:block}
+.tile{cursor:pointer;stroke:var(--panel);stroke-width:2}
+.tile.sel{stroke:var(--ink);stroke-width:3}
+.tname{font-family:var(--display);font-weight:800;font-size:13px;fill:var(--ink);pointer-events:none;text-transform:uppercase;letter-spacing:.03em}
+.tsub{font-family:var(--mono);font-size:10px;fill:var(--ink);pointer-events:none}
+.island{fill:var(--gold);cursor:pointer;stroke:var(--panel);stroke-width:2}
+.island.sel{stroke:var(--ink);stroke-width:3}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:22px;height:10px;border-radius:2px;vertical-align:middle;margin-right:6px}
+
+/* Dossier */
+.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kv .num{font-size:17px;font-weight:600;display:block}
+.capbar{position:relative;height:10px;background:var(--tile);border-radius:2px;margin-top:10px}
+.capbar .fill{position:absolute;inset:0 auto 0 0;background:var(--gold);border-radius:2px}
+.capbar .lock{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--danger)}
+.pol{display:flex;height:18px;border-radius:2px;overflow:hidden}
+.pol span{height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-family:var(--mono);color:#fff;min-width:0;overflow:hidden}
+.pol-key{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.mods{display:flex;flex-wrap:wrap;gap:6px}
+.mod{font-size:12px;border:1px solid var(--line);border-radius:3px;padding:2px 7px}
+.mod.good{border-color:var(--ok);color:var(--ok)} .mod.bad{border-color:var(--danger);color:var(--danger)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:6px;border-bottom:1px dotted var(--line);vertical-align:middle}
+td.r,th.r{text-align:right}
+.sec-bar{display:inline-block;height:6px;background:var(--gold);border-radius:1px;vertical-align:middle;margin-right:6px}
+.act{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{border:1.5px solid var(--people);background:var(--people);color:#fff;border-radius:4px;padding:8px 13px;font-weight:600;font-size:13px}
+.btn.sm{padding:3px 9px;font-size:12px}
+.btn.ghost{background:transparent;color:var(--people)}
+.btn.red{border-color:var(--danger);background:var(--danger)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.tag-public{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ok)}
+.locked-msg{color:var(--danger);font-weight:600}
+
+/* Roster */
+.roster ol{list-style:none;margin:0;padding:0}
+.rich{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:3px 10px;align-items:center;padding:7px 6px;border-top:1px solid var(--line);cursor:pointer;border-radius:3px}
+.rich:first-child{border-top:0}
+.rich:hover{background:color-mix(in oklab,var(--people) 6%,transparent)}
+.rich.sel{background:color-mix(in oklab,var(--people) 12%,transparent)}
+.rich .rk{font-family:var(--display);font-size:19px;font-weight:800;color:var(--muted)}
+.rich .who{min-width:0}
+.rich .who b{font-weight:600}
+.rich .who small{color:var(--muted);display:block;font-size:12px}
+.rich .w{font-family:var(--mono);font-weight:600;color:var(--gold);text-align:right}
+.rich .loc{grid-column:2/4;display:flex;height:5px;border-radius:2px;overflow:hidden;background:var(--line)}
+.rich .loc span{height:100%}
+.chip{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;padding:1px 5px;margin-left:6px;vertical-align:1px}
+.chip.veng{background:var(--danger);color:#fff}
+.chip.heir{border:1px solid var(--muted);color:var(--muted)}
+.chip.faith{background:var(--ok);color:#fff}
+
+/* Target */
+.rel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:8px 0;border-top:1px dotted var(--line)}
+.rel small{grid-column:1/2;color:var(--muted);font-size:12px}
+.rel .btn{grid-row:1/3;grid-column:2/3}
+
+/* Wire */
+.wire ul{list-style:none;margin:0;padding:0;display:grid;gap:7px;max-height:360px;overflow:auto}
+.wire li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;font-size:13px}
+.wire li .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--gold)}
+.wire li.you .dot{background:var(--people)}
+.wire li.bad .dot{background:var(--danger)}
+.wire .yr{font-family:var(--display);font-weight:800;font-size:15px;margin:8px 0 2px;text-transform:uppercase;color:var(--muted)}
+
+.chips{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:8px}
+.delta{display:inline-block;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;padding:2px 8px;border-radius:3px;background:var(--line);color:var(--ink)}
+.delta.up{background:var(--danger);color:#fff}
+.delta.down{background:var(--ok);color:#fff}
+.delta.big{font-size:20px;padding:4px 10px}
+.delta.pulse{animation:pulse 1.2s ease-out 2}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--ink) 40%,transparent)}100%{box-shadow:0 0 0 12px transparent}}
+.rich.acting{background:color-mix(in oklab,var(--gold) 22%,transparent);box-shadow:inset 3px 0 0 var(--gold)}
+body.playing .board,body.playing .hud{pointer-events:none}
+body.playing .end{opacity:.4}
+.pb{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(580px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 14px 44px color-mix(in oklab,var(--ink) 25%,transparent);padding:14px 18px 16px;z-index:9;display:grid;gap:10px}
+.pb-head{display:flex;align-items:center;gap:12px}
+.pb-head .label:first-child{flex:1}
+.pb-prog{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.pb-prog span{display:block;height:100%;background:var(--gold);transition:width .3s}
+.pb-body{display:grid;gap:8px;animation:rise .28s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pb-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pb-who{font-family:var(--display);font-weight:800;font-size:28px;text-transform:uppercase;line-height:1;color:var(--gold)}
+.pb-who.you{color:var(--people)}
+.pb ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.pb li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;font-size:13.5px}
+.pb li .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--gold)}
+.pb li.you .dot{background:var(--people)} .pb li.bad .dot{background:var(--danger)}
+@media (prefers-reduced-motion:reduce){.pb-body,.delta.pulse{animation:none}}
+.povbar{position:relative;width:140px;height:6px;background:var(--line);border-radius:2px;margin:3px 0}
+.povbar .fill{position:absolute;inset:0 auto 0 0;background:var(--danger);border-radius:2px}
+.povbar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.rules summary{cursor:pointer;font-family:var(--display);font-size:20px;font-weight:800;text-transform:uppercase}
+.rules ul{margin:10px 0 0;padding-left:18px;display:grid;gap:5px;max-width:80ch}
+
+.over{position:fixed;inset:0;background:color-mix(in oklab,var(--bg) 70%,transparent);backdrop-filter:blur(3px);display:grid;place-items:center;padding:16px;z-index:10}
+.over .box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:28px;max-width:460px;display:grid;gap:12px}
+.over h2{font-size:48px;line-height:.9}
+.over h2.win{color:var(--ok)} .over h2.lose{color:var(--danger)}
+
+@media (max-width:960px){.top{grid-template-columns:1fr}.board{grid-template-columns:1fr}}
+@media (max-width:560px){
+  .meter{grid-template-columns:auto 1fr}.spark{display:none}.meter .big{font-size:44px}
+  .kv{grid-template-columns:repeat(2,minmax(0,1fr))}.brand h1{font-size:36px}
+  .hud .spacer{display:none}.end{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>The Wealth <span>Gap</span></h1>
+      <span class="label tag">Prototype 0.4 · Tax, nationalise, convert, kill</span>
+    </div>
+    <div class="meter" id="meter"></div>
+  </header>
+
+  <section class="hud" id="hud"></section>
+
+  <main class="board">
+    <div class="col">
+      <div class="card">
+        <div class="card-head"><h2>The World</h2><span class="label">Select a country</span></div>
+        <svg id="map" viewBox="0 0 600 280" role="img" aria-label="World map of countries coloured by billionaire capture"></svg>
+        <div class="legend">
+          <span><i style="background:var(--tile)"></i>Owned by the people</span>
+          <span><i style="background:var(--gold)"></i>Owned by the top 10</span>
+          <span><i style="background:repeating-linear-gradient(45deg,var(--gold) 0 3px,var(--danger) 3px 6px)"></i>Lost</span>
+          <span><i style="background:linear-gradient(90deg,var(--fl),var(--l),var(--c),var(--r),var(--fr))"></i>Politics, far left to far right</span>
+        </div>
+      </div>
+      <div class="card" id="dossier"></div>
+    </div>
+    <div class="col">
+      <div class="card roster" id="roster"></div>
+      <div class="card" id="target"></div>
+      <div class="card wire" id="wire"></div>
+    </div>
+  </main>
+
+  <details class="card rules" id="rules" open>
+    <summary>How it works</summary>
+    <ul>
+      <li><b>Poverty:</b> everything that moves money to the people (taxes, public companies, conversions, kills) lifts people out of poverty, about 100M per $1T. Their rent pushes people back in. Each estimate is shown next to its button.</li>
+      <li><b>Goal:</b> push the top 10's share of world wealth down to <b>12%</b>. At <b>35%</b> they own the world and you lose. Hold out 40 years for a draw.</li>
+      <li><b>Their money grows on its own:</b> 5% a year on assets they own in countries, plus rent from the people. Owning housing doubles the rent. Cash parked offshore grows at only 2%.</li>
+      <li><b>Politics</b> sets your costs. Left-leaning countries make taxing and nationalising cheaper, but the rich flee them sooner. Right-leaning countries cost more, and the rich lobby them more easily. Billionaires who own media push their country to the right every year. <b>Campaign</b> (1 action) shifts a country left. A <b>public broadcaster</b> (2 actions) stops their media pushing a country right for 5 years.</li>
+      <li><b>Wealth tax:</b> each level takes 3% a year of their holdings in that country. At 9% (6% in left-leaning countries) they move their money offshore.</li>
+      <li><b>Make public</b> (needs a centrist or left-leaning country; bigger sectors cost more, about 1.5 actions per $1T): seize every billionaire asset in one sector of one country. The backlash pushes the country a little to the right. Public companies pay 5% a year in profits to the people. The sector is safe for 3 years. After that they can lobby a right-leaning government to privatise it, and that rarely works. Everyone else moves 20% of their money in that country offshore.</li>
+      <li><b>Convert</b> (2 actions): each religion makes them give in a different way. The odds depend on how widespread the religion is in their home country. Every failed attempt makes them more resistant.</li>
+      <li><b>Kill</b> (4 actions, +1 per kill, once a year): half their fortune goes to the people. An heir inherits the rest and spends 3 years smearing you. Everyone else panics and moves 30% offshore.</li>
+      <li><b>Actions:</b> 6 a year, plus 1 for every 15M people pulled out of poverty that year (up to +5). Unused actions carry over, up to 15.</li>
+      <li><b>Their turn:</b> each billionaire gets 1 action, more as they get richer. They buy assets, lobby taxes down, push privatisation, fund the far right or flee offshore. A country that is 50% owned by them is lost.</li>
+    </ul>
+  </details>
+</div>
+<div class="over" id="over" hidden></div>
+<div class="pb" id="pb" hidden aria-live="polite"></div>
+
+<script>
+// ENGINE START
+const CFG={R_COUNTRY:.05,R_CASH:.02,G:.02,RENT:.05,LIFT:100,PUSH:100,WIN:.12,LOSE:.35,LOCK:.5,MAX_TURNS:40,KILL_COST:4,KILL_ESC:1,KILL_LIFT:.4,NAT_LIFT:.5,NAT_MIN:2,NAT_BASE:1,NAT_COMP:0,NAT_LEAN:.3,NAT_BACKLASH:.06,BASE_AP:6,AP_CAP:15,START_YEAR:2026,FLEE_TAX:3,TAX_STEP:.03,CONVERT_COST:2,CAMPAIGN:.08,FAR_RIGHT:.07,MEDIA_PUSH:1,PROTECT:3,PUB_YIELD:.05,PUB_LIFT:.5,NAT_PER_T:1.5,BC_COST:2,BC_YEARS:5};
+const SECTORS=['Media','Housing','Energy','Tech','Retail'];
+const COUNTRIES=[
+  {id:'US',pop:335,name:'United States',short:'USA',P:28,poor:40,lean:.2,rel:{chr:.63,isl:.01,jud:.02,bud:.01},x:30,y:62,w:150,h:78},
+  {id:'BR',pop:215,name:'Brazil',short:'Brazil',P:2.5,poor:40,lean:.05,rel:{chr:.85,isl:0,jud:.001,bud:.001},x:150,y:176,w:78,h:82},
+  {id:'EU',pop:450,name:'European Union',short:'EU',P:22,poor:30,lean:-.05,rel:{chr:.65,isl:.05,jud:.003,bud:.005},x:262,y:58,w:84,h:62},
+  {id:'NG',pop:225,name:'Nigeria',short:'Nigeria',P:1,poor:110,lean:0,rel:{chr:.46,isl:.53,jud:0,bud:0},x:268,y:150,w:66,h:56},
+  {id:'RU',pop:145,name:'Russia',short:'Russia',P:2.5,poor:15,lean:.45,rel:{chr:.7,isl:.1,jud:.001,bud:.005},x:356,y:12,w:178,h:48},
+  {id:'CN',pop:1410,name:'China',short:'China',P:16,poor:60,lean:-.35,rel:{chr:.03,isl:.02,jud:0,bud:.18},x:416,y:72,w:96,h:60},
+  {id:'IN',pop:1430,name:'India',short:'India',P:5,poor:230,lean:.3,rel:{chr:.02,isl:.14,jud:0,bud:.007},x:392,y:142,w:62,h:66},
+  {id:'JP',pop:125,name:'Japan',short:'Japan',P:6,poor:15,lean:.15,rel:{chr:.01,isl:0,jud:0,bud:.35},x:528,y:80,w:40,h:56},
+];
+const RELIGIONS=[
+  {id:'chr',name:'Christianity',act:'Eye of the needle',base:.5,desc:'Gives away 6% of their wealth a year for 5 years, then the feeling fades.'},
+  {id:'isl',name:'Islam',act:'Zakat',base:.45,desc:'Pays 2.5% of their wealth every year, for life.'},
+  {id:'jud',name:'Judaism',act:'Tzedakah',base:.25,desc:'Gives 10% of their yearly income and stops lobbying, for life. Judaism doesn\'t seek converts, so this rarely works.'},
+  {id:'bud',name:'Buddhism',act:'Renunciation',base:.35,desc:'Gives away 40% of everything at once.'},
+];
+const BILLS=[
+  {first:'Rex',last:'Vantor',biz:'Rockets & cars',sec:'Tech',home:'US',w:2.6},
+  {first:'Gideon',last:'Parcel',biz:'The everything store',sec:'Retail',home:'US',w:2.2},
+  {first:'Marcus',last:'Feedwell',biz:'Social media',sec:'Media',home:'US',w:1.9},
+  {first:'Bernard',last:'Luxe',biz:'Handbags',sec:'Retail',home:'EU',w:1.7},
+  {first:'Silas',last:'Ledger',biz:'Databases',sec:'Tech',home:'US',w:1.5},
+  {first:'Zhou',last:'Tianming',biz:'Short video',sec:'Media',home:'CN',w:1.3},
+  {first:'Dmitri',last:'Volkhov',biz:'Gas & metals',sec:'Energy',home:'RU',w:1.2},
+  {first:'Aditya',last:'Vale',biz:'Ports & coal',sec:'Energy',home:'IN',w:1.1},
+  {first:'Carlota',last:'Ríos',biz:'Telecoms & TV',sec:'Media',home:'BR',w:.9},
+  {first:'Kenji',last:'Mori',biz:'Fast fashion',sec:'Retail',home:'JP',w:.8},
+];
+const HEIRS=['Chad','Tiffany','Archibald','Sloane','Kip','Bunny','Thaddeus','Blair','Winslow','Coco','Brock','Saffron'];
+const DEATHS=['yacht sank off Monaco','private jet clipped a mountain','deep-sea submarine tour went quiet','penthouse balcony railing gave way','gold-leaf oyster went down the wrong way','heli-skiing trip ended badly'];
+const ASSETS={Media:['a newspaper','a TV network','a podcast network','a social app'],Housing:['apartment blocks','student housing','a care-home chain','farmland'],Energy:['a pipeline','an oil field','a power utility','a coal port'],Tech:['a chip fab','a cloud provider','an AI lab','a satellite network'],Retail:['a supermarket chain','a delivery app','a fashion house','a mall operator']};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+let S;
+
+function newGame(){
+  const countries=COUNTRIES.map(c=>({...c,rel:{...c.rel},tax:0,lifted:0,pushed:0,pub:{},bc:0}));
+  const P=id=>countries.find(c=>c.id===id).P;
+  const bills=BILLS.map((b,i)=>{
+    const H={};
+    const put=(cid,v,primary)=>{H[cid]=H[cid]||{};H[cid][b.sec]=(H[cid][b.sec]||0)+v*primary;H[cid].Housing=(H[cid].Housing||0)+v*(1-primary)};
+    put(b.home,b.w*.6,.7);
+    const others=['US','EU','CN'].filter(x=>x!==b.home),tot=others.reduce((s,id)=>s+P(id),0);
+    others.forEach(id=>put(id,b.w*.2*P(id)/tot,.5));
+    return {id:'b'+i,first:b.first,last:b.last,biz:b.biz,sec:b.sec,home:b.home,H,cash:b.w*.2,gen:1,veng:0,faith:null,resist:0};
+  });
+  S={v:4,steps:[],yr:newYr(),lastYr:null,poor0:0,turn:0,ap:CFG.BASE_AP,penalty:0,killed:false,kills:0,countries,bills,hist:[],log:[],cur:[],over:null,sel:'US',selB:'b0',lastNet:0,lastBonus:0,lastPenalty:0,usedHeirs:[]};
+  S.hist.push(share());S.poor0=poorTotal();
+}
+const newYr=()=>({tax:0,pub:0,nat:0,kill:0,faith:0,push:0});
+function addLift(c,people,src){c.lifted+=people;S.yr[src]+=people}
+const popTotal=()=>S.countries.reduce((s,c)=>s+c.pop,0);
+const C=id=>S.countries.find(c=>c.id===id);
+const B=id=>S.bills.find(b=>b.id===id);
+const R=id=>RELIGIONS.find(r=>r.id===id);
+const sum=o=>Object.values(o||{}).reduce((a,v)=>a+v,0);
+const hb=(b,cid)=>sum(b.H[cid]);
+const held=c=>S.bills.reduce((s,b)=>s+hb(b,c.id),0);
+const heldSec=(c,s)=>S.bills.reduce((t,b)=>t+((b.H[c.id]||{})[s]||0),0);
+const cap=c=>{const h=held(c);return h/(h+c.P)};
+const locked=c=>cap(c)>=CFG.LOCK;
+const wealth=b=>b.cash+Object.keys(b.H).reduce((s,cid)=>s+hb(b,cid),0);
+const richTotal=()=>S.bills.reduce((s,b)=>s+wealth(b),0);
+const peopleTotal=()=>S.countries.reduce((s,c)=>s+c.P,0);
+const offshoreTotal=()=>S.bills.reduce((s,b)=>s+b.cash,0);
+const share=()=>{const r=richTotal();return r/(r+peopleTotal())};
+const poorTotal=()=>S.countries.reduce((s,c)=>s+c.poor,0);
+const capTier=c=>{const k=cap(c);return k<.15?1:k<.3?2:3};
+const leanMod=c=>c.lean>.5?2:c.lean>.2?1:c.lean<-.3?-1:0;
+const taxCost=c=>locked(c)?Infinity:Math.max(1,capTier(c)+leanMod(c));
+const natCost=(c,sec)=>locked(c)?Infinity:Math.max(CFG.NAT_MIN,CFG.NAT_BASE+capTier(c)+leanMod(c))+(sec?Math.ceil(heldSec(c,sec)*CFG.NAT_PER_T):0);
+const natOK=c=>c.lean<CFG.NAT_LEAN;
+const fleeAt=c=>c.lean<-.2?CFG.FLEE_TAX-1:CFG.FLEE_TAX;
+const killCost=()=>CFG.KILL_COST+(S.kills||0)*CFG.KILL_ESC;
+const convChance=(b,r)=>Math.max(.03,Math.min(.9,R(r).base*(.4+(C(b.home).rel[r]||0))*(1-b.resist)));
+const nameOf=b=>b.first+' '+b.last;
+const fmt=t=>t>=1?'$'+t.toFixed(2)+'T':'$'+Math.round(t*1000)+'B';
+const taxPct=l=>Math.round(l*CFG.TAX_STEP*100);
+let STEP=null;
+function stepStart(title,who=null,kind='rich'){STEP={title,who,kind,lines:[],s0:share()}}
+function stepEnd(){if(!STEP)return;STEP.s=share();if(STEP.lines.length||Math.abs(STEP.s-STEP.s0)>1e-6)S.steps.push(STEP);STEP=null}
+const say=(text,kind='rich')=>{S.cur.push({text,kind});if(STEP)STEP.lines.push({text,kind})};
+const privable=c=>Object.keys(c.pub).filter(s=>S.turn-c.pub[s].since>=CFG.PROTECT);
+const clampLean=v=>Math.max(-1,Math.min(1,v));
+function scaleH(b,cid,f){const h=b.H[cid];if(!h)return 0;let m=0;for(const s in h){const d=h[s]*f;h[s]-=d;m+=d}return m}
+function toOffshore(b,cid,f){const m=scaleH(b,cid,f);b.cash+=m;return m}
+function give(b,amt,mult=1){ // take from cash first, then holdings; hand to poorest countries
+  amt=Math.min(amt,wealth(b));let need=amt;
+  const fromCash=Math.min(b.cash,need);b.cash-=fromCash;need-=fromCash;
+  if(need>0){const h=wealth(b)-b.cash;const f=Math.min(1,need/h);for(const cid in b.H)scaleH(b,cid,f)}
+  const pt=poorTotal()||1;
+  S.countries.forEach(c=>{const part=amt*c.poor/pt;c.P+=part;addLift(c,part*CFG.LIFT*mult,'faith')});
+  return amt;
+}
+
+function raiseTax(id){
+  const c=C(id),k=taxCost(c);
+  if(S.over||c.tax>=5||S.ap<k)return false;
+  c.tax++;S.ap-=k;say(`You raised the wealth tax in ${c.name} to ${taxPct(c.tax)}% a year.`,'you');return true;
+}
+function broadcaster(id){
+  const c=C(id);if(S.over||locked(c)||c.bc>0||S.ap<CFG.BC_COST)return false;
+  S.ap-=CFG.BC_COST;c.bc=CFG.BC_YEARS;say(`You fund a public broadcaster in ${c.name}. Their media can't push politics right for ${CFG.BC_YEARS} years.`,'you');return true;
+}
+function campaign(id){
+  const c=C(id);if(S.over||locked(c)||S.ap<1||c.lean<=-1)return false;
+  S.ap-=1;c.lean=clampLean(c.lean-CFG.CAMPAIGN);say(`You ran a grassroots campaign in ${c.name}. Politics shift left.`,'you');return true;
+}
+function nationalise(id,sec){
+  const c=C(id),k=natCost(c,sec),amt=heldSec(c,sec);
+  if(S.over||!natOK(c)||c.pub[sec]||amt<.005||S.ap<k)return false;
+  S.ap-=k;c.pub[sec]={since:S.turn,val:amt};
+  S.bills.forEach(b=>{const h=b.H[c.id];if(h&&h[sec]){b.cash+=h[sec]*CFG.NAT_COMP;h[sec]=0}});
+  const kept=amt*(1-CFG.NAT_COMP);c.P+=kept;addLift(c,kept*CFG.LIFT*CFG.NAT_LIFT,'nat');c.lean=clampLean(c.lean+CFG.NAT_BACKLASH);
+  let fled=0;S.bills.forEach(b=>fled+=toOffshore(b,c.id,.2));
+  say(`${c.name} takes its ${sec.toLowerCase()} sector into public hands: ${fmt(amt)} of assets seized. Spooked owners move ${fmt(fled)} offshore.`,'you');return true;
+}
+function convert(bid,rid){
+  const b=B(bid),r=R(rid);
+  if(S.over||b.faith||S.ap<CFG.CONVERT_COST)return false;
+  S.ap-=CFG.CONVERT_COST;
+  if(Math.random()<convChance(b,rid)){
+    if(rid==='bud'){const g=give(b,wealth(b)*.4);b.faith={rel:'bud',years:0,done:true};say(`${nameOf(b)} finds Buddhism and renounces ${fmt(g)} in one go.`,'you')}
+    else{b.faith={rel:rid,years:rid==='chr'?5:0};say(`${nameOf(b)} converts to ${r.name}. ${r.act} begins.`,'you')}
+  }else{b.resist=Math.min(.8,b.resist+.2);say(`${nameOf(b)} sits through the sermon on ${r.name} and leaves unmoved. They'll be harder to reach next time.`,'bad')}
+  return true;
+}
+function kill(bid){
+  const b=B(bid),kc=killCost();
+  if(S.over||S.killed||S.ap<kc)return false;
+  S.ap-=kc;S.killed=true;S.kills=(S.kills||0)+1;
+  let freed=0;
+  for(const cid in b.H){const amt=scaleH(b,cid,.5);const c=C(cid);c.P+=amt;addLift(c,amt*CFG.LIFT*CFG.KILL_LIFT,'kill');freed+=amt}
+  const cashFree=b.cash*.5;b.cash-=cashFree;freed+=cashFree;
+  const pt=poorTotal()||1;S.countries.forEach(c=>{const part=cashFree*c.poor/pt;c.P+=part;addLift(c,part*CFG.LIFT*CFG.KILL_LIFT,'kill')});
+  const old=nameOf(b),free=HEIRS.filter(h=>!S.usedHeirs.includes(h));
+  b.first=pick(free.length?free:HEIRS);S.usedHeirs.push(b.first);b.gen++;b.veng=3;b.faith=null;b.resist=.3;
+  let fled=0;S.bills.forEach(o=>{if(o===b)return;for(const cid in o.H)fled+=toOffshore(o,cid,.3)});
+  say(`${old}'s ${pick(DEATHS)}. ${fmt(freed)} returned to the people. ${nameOf(b)} inherits the rest and swears revenge. The others panic and move ${fmt(fled)} offshore.`,'you');
+  return true;
+}
+
+function richAction(b){
+  if(b.veng>0&&!b._smeared){b._smeared=true;S.penalty++;say(`${nameOf(b)} funds a smear campaign against you. You lose 1 action next year.`,'bad');return}
+  const flee=S.countries.filter(c=>c.tax>=fleeAt(c)&&hb(b,c.id)>.05).sort((a,z)=>hb(b,z.id)-hb(b,a.id))[0];
+  if(flee){const m=toOffshore(b,flee.id,.6);say(`${nameOf(b)} moves ${fmt(m)} out of ${flee.name} to offshore accounts.`);return}
+  const lobbies=b.faith?.rel!=='jud';
+  const lob=S.countries.filter(c=>c.tax>0&&hb(b,c.id)>.15).sort((a,z)=>hb(b,z.id)-hb(b,a.id))[0];
+  if(lobbies&&lob&&Math.random()<.65){
+    const ch=locked(lob)?1:Math.min(1,.2+cap(lob)*1.6+lob.lean*.3);
+    if(Math.random()<ch){lob.tax--;say(`${nameOf(b)} lobbies ${lob.name}. The wealth tax drops to ${taxPct(lob.tax)}%.`)}
+    else say(`${nameOf(b)} tries to lobby ${lob.name}, but the vote fails.`);
+    return;
+  }
+  const priv=S.countries.filter(c=>privable(c).length&&c.lean>.1&&c._privTried!==S.turn)[0];
+  if(lobbies&&priv&&Math.random()<.5){
+    priv._privTried=S.turn;
+    const sec=pick(privable(priv));
+    if(Math.random()<.15+priv.lean*.5){delete priv.pub[sec];say(`${nameOf(b)} talks ${priv.name} into privatising its ${sec.toLowerCase()} sector again.`)}
+    else say(`${nameOf(b)} pushes ${priv.name} to privatise ${sec.toLowerCase()}, without success.`);
+    return;
+  }
+  const tgtR=S.countries.filter(c=>c.lean<.7&&hb(b,c.id)>.1&&(c.tax>0||Object.values(c.pub).some(Boolean)||c.lean<0)).sort((a,z)=>hb(b,z.id)-hb(b,a.id))[0];
+  if(tgtR&&Math.random()<.4){tgtR.lean=clampLean(tgtR.lean+CFG.FAR_RIGHT);say(`${nameOf(b)} bankrolls a far-right party in ${tgtR.name}.`,'bad');return}
+  if(b.cash<.05)return;
+  const t=S.countries.map(c=>({c,s:(c.tax>=fleeAt(c)?.05:1-c.tax*.25)*(.3+cap(c))*Math.sqrt(c.P)*(1+Math.max(0,c.lean)*.5)*(.7+.6*Math.random())})).sort((a,z)=>z.s-a.s)[0].c;
+  const opts=[b.sec,b.sec,'Housing','Housing','Media'].filter(s=>!t.pub[s]);
+  if(!opts.length)return;
+  const sec=pick(opts),amt=b.cash*.6;
+  b.cash-=amt;b.H[t.id]=b.H[t.id]||{};b.H[t.id][sec]=(b.H[t.id][sec]||0)+amt;
+  say(`${nameOf(b)} buys ${pick(ASSETS[sec])} in ${t.name} for ${fmt(amt)}.`);
+}
+function actionsFor(b){const w=wealth(b);return 1+(w>=3)+(w>=6)+(b.veng>0)}
+
+function endTurn(){
+  if(S.over)return;
+  S.steps=[];
+  stepStart('Your policies take effect',null,'you');
+  let rev=0;
+  S.countries.forEach(c=>{if(!c.tax)return;S.bills.forEach(b=>{const a=scaleH(b,c.id,c.tax*CFG.TAX_STEP);if(!a)return;c.P+=a;addLift(c,a*CFG.LIFT,'tax');rev+=a})});
+  if(rev>0)say(`Wealth taxes collect ${fmt(rev)}, lifting ~${Math.round(rev*CFG.LIFT)}M people out of poverty.`,'you');
+  let div=0;
+  S.countries.forEach(c=>{const v=Object.values(c.pub).reduce((a,p)=>a+(p.val||0),0);if(!v||locked(c))return;const d=v*CFG.PUB_YIELD;c.P+=d;addLift(c,d*CFG.LIFT*CFG.PUB_LIFT,'pub');div+=d});
+  if(div>0)say(`Public companies pay ${fmt(div)} to the people, lifting ~${Math.round(div*CFG.LIFT*CFG.PUB_LIFT)}M out of poverty.`,'you');
+  // faith giving
+  S.bills.forEach(b=>{
+    if(!b.faith||b.faith.done)return;
+    if(b.faith.rel==='chr'){const g=give(b,wealth(b)*.06);say(`${nameOf(b)} gives away ${fmt(g)} (eye of the needle, ${b.faith.years-1} years left).`,'you');if(--b.faith.years<=0){b.faith=null;b.resist=Math.min(.8,b.resist+.3);say(`${nameOf(b)}'s faith fades. Back to business.`,'bad')}}
+    else if(b.faith.rel==='isl'){const g=give(b,wealth(b)*.025);say(`${nameOf(b)} pays ${fmt(g)} in zakat.`,'you')}
+  });
+  stepEnd();
+  // rent (housing counts double) is worked out up front, then paid out during each billionaire's step
+  const rents={};
+  S.countries.forEach(c=>{
+    const h=held(c);if(!h)return;const hh=heldSec(c,'Housing');
+    const rent=c.P*CFG.RENT*(h+hh)/(h+c.P);
+    S.bills.forEach(b=>{const wgt=hb(b,c.id)+((b.H[c.id]||{}).Housing||0);if(wgt>0)(rents[b.id]=rents[b.id]||[]).push({c,amt:rent*wgt/(h+hh)})});
+    const media=heldSec(c,'Media');if(media>0&&!(c.bc>0))c.lean=clampLean(c.lean+Math.min(.05,media/c.P*CFG.MEDIA_PUSH));
+  });
+  [...S.bills].sort((a,z)=>wealth(z)-wealth(a)).forEach(b=>{
+    stepStart(nameOf(b),b.id);
+    const w0=wealth(b);
+    let pushed=0;
+    (rents[b.id]||[]).forEach(({c,amt})=>{c.P-=amt;c.pushed+=amt*CFG.PUSH;S.yr.push+=amt*CFG.PUSH;pushed+=amt*CFG.PUSH;b.cash+=amt});
+    const profit=(wealth(b)-b.cash)*CFG.R_COUNTRY;
+    b.cash=b.cash*(1+CFG.R_CASH)+profit;
+    say(`Earns ${fmt(wealth(b)-w0)} from returns and rent.${pushed>=.5?` The rent pushes ~${Math.round(pushed)}M people into poverty.`:''}`);
+    if(b.faith?.rel==='jud'){const g=give(b,profit*.1);say(`${nameOf(b)} gives ${fmt(g)} in tzedakah.`,'you')}
+    b._smeared=false;const n=actionsFor(b);for(let i=0;i<n;i++)richAction(b);if(b.veng>0)b.veng--;
+    stepEnd();
+  });
+  stepStart('The year ends',null,'you');
+  say(`The people's economy grows ${CFG.G*100}%.`,'you');
+  let net=0;
+  S.countries.forEach(c=>{
+    c.P*=1+CFG.G;const lift=Math.min(c.lifted,c.poor+c.pushed);c.poor=Math.max(0,c.poor-lift+c.pushed);
+    const d=lift-c.pushed;net+=d;c.lean=clampLean(c.lean+(d>1?-.01:d<-1?.01:0));c.lifted=0;c.pushed=0;
+  });
+  S.countries.forEach(c=>{if(c.bc>0){c.bc--;if(!c.bc)say(`The public broadcaster in ${c.name} loses its funding.`,'bad')}});
+  S.lastNet=net;S.lastYr=S.yr;S.yr=newYr();
+  say(net>=0?`${Math.round(net)}M people left poverty this year.`:`${Math.round(-net)}M people fell into poverty this year.`,net>=0?'you':'bad');
+  stepEnd();
+  const bonus=Math.max(0,Math.min(5,Math.floor(net/15)));
+  S.ap=Math.max(0,Math.min(CFG.AP_CAP,S.ap+CFG.BASE_AP+bonus-S.penalty));
+  S.lastBonus=bonus;S.lastPenalty=S.penalty;S.penalty=0;S.killed=false;
+  S.log.unshift({year:CFG.START_YEAR+S.turn,items:S.cur});S.cur=[];
+  S.turn++;S.hist.push(share());
+  const s=share();
+  if(s>=CFG.LOSE)S.over={win:false,title:'Oligarchy',text:`The top 10 own ${(s*100).toFixed(1)}% of the world. Elections are now a subscription service.`};
+  else if(s<=CFG.WIN)S.over={win:true,title:'Levelled',text:`The top 10 are down to ${(s*100).toFixed(1)}% of world wealth after ${S.turn} years.`};
+  else if(S.countries.every(locked))S.over={win:false,title:'Captured',text:'Every country is owned. There is nothing left to govern.'};
+  else if(S.turn>=CFG.MAX_TURNS)S.over={win:true,title:'Held the line',text:`40 years and they never took over. Final share: ${(s*100).toFixed(1)}%.`};
+}
+// ENGINE END
+
+const $=id=>document.getElementById(id);
+const pct=x=>(x*100).toFixed(1)+'%';
+const LEAN_COLORS=['var(--fl)','var(--l)','var(--c)','var(--r)','var(--fr)'];
+const LEAN_NAMES=['Far left','Left','Centre','Right','Far right'];
+const campaignsNeeded=c=>Math.max(1,Math.ceil((c.lean-CFG.NAT_LEAN)/CFG.CAMPAIGN+1e-9));
+const leanName=L=>L<-.5?'Far left':L<-.15?'Left-leaning':L<.15?'Centrist':L<.5?'Right-leaning':'Far right';
+function erf(x){const t=1/(1+.3275911*Math.abs(x)),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x);return x>=0?y:-y}
+function buckets(L){const sd=.45,cdf=x=>.5*(1+erf((x-L)/(sd*Math.SQRT2)));const e=[-.6,-.2,.2,.6].map(cdf);return [e[0],e[1]-e[0],e[2]-e[1],e[3]-e[2],1-e[3]]}
+function locColor(id){return id==='cash'?'var(--gold)':`color-mix(in oklab, var(--people) ${30+COUNTRIES.findIndex(c=>c.id===id)*9}%, var(--tile))`}
+
+const ppTxt=d=>(d>=0?'+':'−')+Math.abs(d*100).toFixed(2)+' pp';
+const ppCls=d=>Math.abs(d)<5e-5?'flat':d>0?'up':'down';
+let SHOWN=null;
+function renderMeter(disp=share(),hist=S.hist){
+  const max=.5;
+  const series=PB?hist.concat([disp]):hist;
+  const pts=series.map((v,i)=>[series.length<2?2:i/(series.length-1)*146+2,42-v/max*40]);
+  const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const yW=42-CFG.WIN/max*40,yL=42-CFG.LOSE/max*40,last=pts[pts.length-1];
+  let chips='';
+  if(PB){const d=disp-PB.y0;chips=`<span class="delta ${ppCls(d)}" id="ppNow">${ppTxt(d)}</span><span class="note">this year so far</span>`}
+  else if(hist.length>1){
+    const d=hist[hist.length-1]-hist[hist.length-2],m=share()-hist[hist.length-1];
+    chips=`<span class="delta ${ppCls(d)}${S.justPlayed?' pulse':''}">${ppTxt(d)}</span><span class="note">in ${CFG.START_YEAR+S.turn-1}</span>`+
+      (Math.abs(m)>5e-5?`<span class="delta ${ppCls(m)}">${ppTxt(m)}</span><span class="note">your moves this year</span>`:'');
+  }
+  SHOWN=disp;
+  $('meter').innerHTML=`
+    <div><div class="big" id="bigNum">${pct(disp)}</div><div class="label">Top 10 share of world wealth</div><div class="chips">${chips}</div></div>
+    <div class="bar-wrap">
+      <div class="bar"><div class="fill" id="barFill" style="width:${Math.min(100,disp/max*100)}%"></div>
+        <div class="mark win" style="left:${CFG.WIN/max*100}%"><b>Win ${CFG.WIN*100}%</b></div>
+        <div class="mark lose" style="left:${CFG.LOSE/max*100}%"><b>Lose ${CFG.LOSE*100}%</b></div></div>
+      <div class="label num">People ${fmt(peopleTotal())} · Top 10 ${fmt(richTotal())} · Offshore ${fmt(offshoreTotal())}</div>
+    </div>
+    <svg class="spark" viewBox="0 0 150 44" aria-label="Share over time">
+      <line x1="0" x2="150" y1="${yL}" y2="${yL}" stroke="var(--danger)" stroke-dasharray="3 3" stroke-width="1"/>
+      <line x1="0" x2="150" y1="${yW}" y2="${yW}" stroke="var(--ok)" stroke-dasharray="3 3" stroke-width="1"/>
+      <path d="${path}" fill="none" stroke="var(--gold)" stroke-width="2"/>
+      <circle cx="${last[0]}" cy="${last[1]}" r="3" fill="var(--gold)"/>
+    </svg>`;
+}
+const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function tweenMeter(from,to,ms){
+  return new Promise(res=>{
+    if(REDUCED){SHOWN=to;renderMeter(to,PB.hist);res();return}
+    const t0=performance.now();
+    const tick=now=>{
+      if(!PB){res();return}
+      const k=Math.min(1,(now-t0)/ms),e=1-Math.pow(1-k,3),v=from+(to-from)*e;
+      SHOWN=v;$('bigNum').textContent=pct(v);$('barFill').style.width=Math.min(100,v/.5*100)+'%';
+      const c=$('ppNow');if(c){const d=v-PB.y0;c.textContent=ppTxt(d);c.className='delta '+ppCls(d)}
+      k<1?requestAnimationFrame(tick):(renderMeter(to,PB.hist),res());
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+// Playback of the billionaires' turn
+let PB=null;
+async function playYear(){
+  const y0=S.hist[S.hist.length-1],pre=share(),year=CFG.START_YEAR+S.turn,hist=S.hist.slice();
+  endTurn();
+  const steps=S.steps.slice();
+  PB={y0,hist,year,steps,i:0,skip:false};
+  $('pb').hidden=false;
+  document.body.classList.add('playing');
+  let prev=pre;
+  for(let i=0;i<steps.length;i++){
+    if(!PB||PB.skip)break;
+    PB.i=i;renderPB(steps[i],i,steps.length);
+    await tweenMeter(prev,steps[i].s,650);prev=steps[i].s;
+    if(!PB||PB.skip)break;
+    await new Promise(r=>{PB.timer=setTimeout(r,Math.min(2600,950+380*(steps[i].lines.length-1)))});
+  }
+  finishYear();
+}
+function renderPB(st,i,n){
+  document.querySelectorAll('.rich.acting').forEach(el=>el.classList.remove('acting'));
+  if(st.who){const row=document.querySelector(`.rich[data-b="${st.who}"]`);row&&row.classList.add('acting')}
+  const d=st.s-st.s0;
+  $('pb').innerHTML=`<div class="pb-head"><span class="label">Their turn · ${PB.year}</span><span class="label num">${i+1} / ${n}</span><button class="btn sm ghost" id="pbSkip">Skip</button></div>
+    <div class="pb-prog"><span style="width:${(i+1)/n*100}%"></span></div>
+    <div class="pb-body">
+      <div class="pb-top"><div class="pb-who ${st.kind}">${st.title}</div><div class="delta big ${ppCls(d)}">${ppTxt(d)}</div></div>
+      <ul>${st.lines.map(l=>`<li class="${l.kind}"><span class="dot"></span><span>${l.text}</span></li>`).join('')}</ul>
+    </div>`;
+}
+function finishYear(){
+  if(PB&&PB.timer)clearTimeout(PB.timer);
+  PB=null;$('pb').hidden=true;$('pb').innerHTML='';
+  document.body.classList.remove('playing');
+  S.justPlayed=true;render();S.justPlayed=false;
+}
+function renderHud(){
+  const pips=Array.from({length:CFG.AP_CAP},(_,i)=>`<span class="pip${i<S.ap?'':' empty'}"></span>`).join('');
+  const last=S.turn?`+${CFG.BASE_AP} base, +${S.lastBonus} from poverty${S.lastPenalty?`, −${S.lastPenalty} smears`:''}`:`${CFG.BASE_AP} actions to start`;
+  const rate=poorTotal()/popTotal(),rate0=S.poor0/popTotal(),scale=.25;
+  const y=S.lastYr,you=y?y.tax+y.pub+y.nat+y.kill+y.faith:0;
+  const lastHtml=S.turn&&y?`<span class="num" style="color:${S.lastNet>=0?'var(--ok)':'var(--danger)'}">${S.lastNet>=0?'+':'−'}${Math.abs(Math.round(S.lastNet))}M lifted</span>
+      <span class="note">~${Math.round(you)}M lifted by you · ~${Math.round(y.push)}M pushed down by their rent</span>`:'<span class="note">Nothing yet</span>';
+  $('hud').innerHTML=`
+    <div class="stat"><span class="label">Year</span><span class="num">${CFG.START_YEAR+S.turn}</span></div>
+    <div class="stat"><span class="label">Actions · ${S.ap} left</span><div class="pips" aria-label="${S.ap} actions">${pips}</div><span class="note">${last}</span></div>
+    <div class="stat"><span class="label">In poverty</span><span class="num">${Math.round(poorTotal())}M · ${(rate*100).toFixed(1)}%</span>
+      <div class="povbar" title="Share of the world's ${(popTotal()/1000).toFixed(1)}B people in poverty. Tick = where you started."><span class="fill" style="width:${Math.min(100,rate/scale*100)}%"></span><span class="tick" style="left:${rate0/scale*100}%"></span></div>
+      <span class="note">of ${(popTotal()/1000).toFixed(1)}B people · started at ${(rate0*100).toFixed(1)}%</span></div>
+    <div class="stat"><span class="label">Last year</span>${lastHtml}</div>
+    <span class="spacer"></span>
+    <button class="end" id="endBtn">End year →</button>`;
+}
+function renderMap(){
+  let h=`<defs><pattern id="lost" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)"><rect width="8" height="8" fill="var(--gold)"/><rect width="3" height="8" fill="var(--danger)"/></pattern></defs>`;
+  S.countries.forEach(c=>{
+    const k=cap(c),L=locked(c);
+    const fill=L?'url(#lost)':`color-mix(in oklab, var(--gold) ${Math.round(Math.min(1,k/CFG.LOCK)*100)}%, var(--tile))`;
+    const bk=buckets(c.lean);let px=c.x+4;const bw=c.w-8;
+    const pol=bk.map((v,i)=>{const r=`<rect x="${px.toFixed(1)}" y="${c.y+c.h-9}" width="${(v*bw).toFixed(1)}" height="5" fill="${LEAN_COLORS[i]}" pointer-events="none"/>`;px+=v*bw;return r}).join('');
+    const pubs=Object.values(c.pub).filter(Boolean).length;
+    h+=`<g><rect class="tile${S.sel===c.id?' sel':''}" data-c="${c.id}" tabindex="0" role="button" aria-label="${c.name}" x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="4" style="fill:${fill}"/>
+      <text class="tname" x="${c.x+7}" y="${c.y+17}">${c.short}</text>
+      <text class="tsub" x="${c.x+7}" y="${c.y+30}">${L?'LOST':Math.round(k*100)+'% owned'}</text>
+      <text class="tsub" x="${c.x+7}" y="${c.y+42}">${[c.tax?'tax '+taxPct(c.tax)+'%':'',pubs?pubs+' public':''].filter(Boolean).join(' · ')}</text>${pol}</g>`;
+  });
+  const r=10+Math.min(18,Math.sqrt(offshoreTotal())*7);
+  h+=`<g><circle class="island${S.sel==='OFF'?' sel':''}" data-c="OFF" tabindex="0" role="button" aria-label="Offshore accounts" cx="232" cy="152" r="${r}"/>
+    <text class="tname" x="232" y="${152-r-6}" text-anchor="middle">Offshore</text></g>`;
+  $('map').innerHTML=h;
+}
+function renderDossier(){
+  if(S.sel==='OFF'){
+    const rows=[...S.bills].sort((a,z)=>z.cash-a.cash).slice(0,6).map(b=>`<tr><td>${nameOf(b)}</td><td class="r num">${fmt(b.cash)}</td></tr>`).join('');
+    $('dossier').innerHTML=`<div class="card-head"><h2>Offshore accounts</h2><span class="label">Untaxable</span></div>
+      <div class="kv"><div><span class="label">Parked</span><span class="num">${fmt(offshoreTotal())}</span></div><div><span class="label">Growth</span><span class="num">${CFG.R_CASH*100}%/yr</span></div></div>
+      <div class="sub"><div class="tbl-wrap"><table><thead><tr><th>Owner</th><th class="r">Cash</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="note">You can't touch money here. It grows slower than assets in countries, and they spend it buying more of them.</p></div>`;
+    return;
+  }
+  const c=C(S.sel),k=cap(c),L=locked(c),tc=taxCost(c);
+  const bk=buckets(c.lean);
+  const pol=bk.map((v,i)=>`<span style="width:${v*100}%;background:${LEAN_COLORS[i]}" title="${LEAN_NAMES[i]} ${Math.round(v*100)}%">${v>.09?Math.round(v*100)+'%':''}</span>`).join('');
+  const lm=leanMod(c);
+  const mods=[
+    lm<0?`<span class="mod good">Taxes ${-lm} cheaper</span>`:lm>0?`<span class="mod bad">Taxes +${lm} action${lm>1?'s':''}</span>`:'',
+    fleeAt(c)<CFG.FLEE_TAX?`<span class="mod bad">Rich flee at ${taxPct(fleeAt(c))}% tax</span>`:`<span class="mod">Rich flee at ${taxPct(fleeAt(c))}% tax</span>`,
+    c.lean>0?`<span class="mod bad">Lobbying easier</span>`:'',
+    natOK(c)?`<span class="mod good">Can make sectors public</span>`:`<span class="mod bad">Too far right to make sectors public: campaign left ${campaignsNeeded(c)}× to unlock</span>`,
+    c.bc>0?`<span class="mod good">Public broadcaster: ${c.bc} yr${c.bc>1?'s':''} left</span>`:heldSec(c,'Media')>.01?`<span class="mod bad">Their media pushes right</span>`:''
+  ].join('');
+  const secRows=SECTORS.map(s=>{
+    const amt=heldSec(c,s);
+    const owner=S.bills.filter(b=>((b.H[c.id]||{})[s]||0)>.002).sort((a,z)=>z.H[c.id][s]-a.H[c.id][s])[0];
+    const nc=natCost(c,s),can=!L&&!S.over&&natOK(c)&&amt>.005&&S.ap>=nc;
+    const est=c.pub[s]?`~${Math.round(c.pub[s].val*CFG.PUB_YIELD*CFG.LIFT*CFG.PUB_LIFT)}M/yr`:amt>.005?`~${Math.round(amt*CFG.LIFT*CFG.NAT_LIFT)}M now, ~${Math.round(amt*CFG.PUB_YIELD*CFG.LIFT*CFG.PUB_LIFT)}M/yr`:'';
+    const left=c.pub[s]?CFG.PROTECT-(S.turn-c.pub[s].since):0;
+    const actCell=c.pub[s]?`<span class="tag-public">Public</span> <span class="note">${left>0?`safe for ${left} yr${left>1?'s':''}`:'can be privatised'}</span>`:amt>.005&&!L?(natOK(c)?`<button class="btn sm" data-nat="${s}" ${can?'':'disabled'}>Make public · ${nc}</button>`:'<span class="note">Too far right</span>'):'<span class="note">—</span>';
+    return `<tr><td>${s}</td><td class="num"><span class="sec-bar" style="width:${Math.min(60,amt/Math.max(.01,held(c))*60)}px"></span>${amt>.0005?fmt(amt):'$0'}</td><td>${owner?nameOf(owner):'<span class="note">None</span>'}</td><td class="note">${est}</td><td class="r">${actCell}</td></tr>`;
+  }).join('');
+  const canTax=!L&&c.tax<5&&S.ap>=tc&&!S.over, canCamp=!L&&S.ap>=1&&!S.over&&c.lean>-1, canBc=!L&&!(c.bc>0)&&S.ap>=CFG.BC_COST&&!S.over;
+  const taxLift=Math.round(held(c)*CFG.TAX_STEP*CFG.LIFT);
+  $('dossier').innerHTML=`<div class="card-head"><h2>${c.name}</h2><span class="label">${L?'Lost':leanName(c.lean)}</span></div>
+    <div class="kv">
+      <div><span class="label">Owned by top 10</span><span class="num">${pct(k)}</span></div>
+      <div><span class="label">Wealth tax</span><span class="num">${taxPct(c.tax)}%/yr</span></div>
+      <div><span class="label">In poverty</span><span class="num">${Math.round(c.poor)}M · ${Math.round(c.poor/c.pop*100)}%</span></div>
+      <div><span class="label">People's wealth</span><span class="num">${fmt(c.P)}</span></div>
+    </div>
+    <div class="capbar" title="Lost at ${CFG.LOCK*100}%"><div class="fill" style="width:${Math.min(100,k*100)}%"></div><div class="lock" style="left:${CFG.LOCK*100}%"></div></div>
+    <div class="sub"><h3>Politics</h3><div class="pol">${pol}</div><div class="pol-key"><span>Far left</span><span>Far right</span></div><div class="mods">${mods}</div></div>
+    <div class="sub"><h3>Who owns what</h3><div class="tbl-wrap"><table><thead><tr><th>Sector</th><th>Top 10 own</th><th>Biggest owner</th><th>Out of poverty</th><th class="r"></th></tr></thead><tbody>${secRows}</tbody></table></div></div>
+    <div class="sub act">
+      ${L?`<span class="locked-msg">The top 10 own half of ${c.name}. You can no longer act here.</span>`:
+      `<button class="btn" id="taxBtn" ${canTax?'':'disabled'}>Raise wealth tax · ${tc}</button>
+       <button class="btn ghost" id="campBtn" ${canCamp?'':'disabled'}>Campaign left · 1</button>
+       <button class="btn ghost" id="bcBtn" ${canBc?'':'disabled'}>Public broadcaster · ${CFG.BC_COST}</button>
+       <span class="note">${c.tax>=5?'Tax is at the maximum.':`Next tax level: ${taxPct(c.tax+1)}%, lifting ~${taxLift}M a year out of poverty until they flee.`}</span>`}
+    </div>`;
+}
+function renderRoster(){
+  const ranked=[...S.bills].sort((a,z)=>wealth(z)-wealth(a));
+  const rows=ranked.map((b,i)=>{
+    const w=wealth(b);
+    const parts=[...Object.keys(b.H).map(cid=>[cid,hb(b,cid)]),['cash',b.cash]].filter(([,v])=>v>.001).map(([id,v])=>`<span title="${id==='cash'?'Offshore':C(id).name}: ${fmt(v)}" style="width:${v/w*100}%;background:${locColor(id)}"></span>`).join('');
+    const chips=(b.gen>1?'<span class="chip heir">Heir</span>':'')+(b.veng>0?`<span class="chip veng">Vengeful ${b.veng}y</span>`:'')+(b.faith?`<span class="chip faith">${R(b.faith.rel).name}</span>`:'');
+    return `<li class="rich${S.selB===b.id?' sel':''}" data-b="${b.id}" tabindex="0" role="button"><span class="rk">${i+1}</span>
+      <span class="who"><b>${nameOf(b)}</b>${chips}<small>${b.biz} · ${actionsFor(b)} action${actionsFor(b)>1?'s':''}/yr</small></span>
+      <span class="w">${fmt(w)}</span><span class="loc" aria-hidden="true">${parts}</span></li>`;
+  }).join('');
+  $('roster').innerHTML=`<div class="card-head"><h2>The Top 10</h2><span class="label">Select a target · gold = offshore</span></div><ol>${rows}</ol>`;
+}
+function renderTarget(){
+  const b=B(S.selB);if(!b){$('target').innerHTML='';return}
+  const w=wealth(b),kc=killCost(),canKill=S.ap>=kc&&!S.killed&&!S.over;
+  const where=Object.keys(b.H).map(cid=>[C(cid).name,hb(b,cid)]).concat([['Offshore',b.cash]]).filter(([,v])=>v>.005).sort((a,z)=>z[1]-a[1]).slice(0,5)
+    .map(([n,v])=>`<tr><td>${n}</td><td class="r num">${fmt(v)}</td></tr>`).join('');
+  const faith=b.faith?`<p class="note"><b>${R(b.faith.rel).name}:</b> ${b.faith.done?'already renounced 40% of their wealth.':b.faith.rel==='chr'?`giving 6% a year, ${b.faith.years} years left.`:R(b.faith.rel).desc}</p>`:'';
+  const rels=RELIGIONS.map(r=>{
+    const ch=convChance(b,r.id),can=!b.faith&&S.ap>=CFG.CONVERT_COST&&!S.over;
+    const lift={chr:`~${Math.round(w*.06*CFG.LIFT)}M a year`,isl:`~${Math.round(w*.025*CFG.LIFT)}M a year`,jud:`~${Math.round(w*CFG.R_COUNTRY*.1*CFG.LIFT)}M a year`,bud:`~${Math.round(w*.4*CFG.LIFT)}M at once`}[r.id];
+    return `<div class="rel"><span><b>${r.name}</b> · ${r.act}</span><small>${r.desc} Lifts ${lift} out of poverty.</small><button class="btn sm ghost" data-conv="${r.id}" ${can?'':'disabled'}>Convert · ${CFG.CONVERT_COST} · ${Math.round(ch*100)}%</button></div>`;
+  }).join('');
+  $('target').innerHTML=`<div class="card-head"><h2>${nameOf(b)}</h2><span class="label">${b.biz} · home: ${C(b.home).name}</span></div>
+    <div class="kv"><div><span class="label">Wealth</span><span class="num">${fmt(w)}</span></div><div><span class="label">Resistance</span><span class="num">${Math.round(b.resist*100)}%</span></div><div><span class="label">Actions/yr</span><span class="num">${actionsFor(b)}</span></div><div><span class="label">Generation</span><span class="num">${b.gen}</span></div></div>
+    <div class="sub"><div class="tbl-wrap"><table><thead><tr><th>Where their money is</th><th class="r"></th></tr></thead><tbody>${where}</tbody></table></div>${faith}</div>
+    <div class="sub"><h3>Convert</h3>${b.faith?'<p class="note">Already converted.</p>':rels}</div>
+    <div class="sub act"><button class="btn red" id="killBtn" ${canKill?'':'disabled'}>Kill · ${kc} actions</button><span class="note">${S.killed?'You already killed someone this year.':`Half their fortune goes to the people, lifting ~${Math.round(w*.5*CFG.LIFT*CFG.KILL_LIFT)}M out of poverty. Their heir wants revenge.`}</span></div>`;
+}
+function renderWire(){
+  const blocks=[];
+  if(S.cur.length)blocks.push({year:'This year',items:S.cur});
+  S.log.slice(0,6).forEach(l=>blocks.push(l));
+  const html=blocks.map(b=>`<div class="yr">${b.year}</div>`+b.items.map(it=>`<li class="${it.kind}"><span class="dot"></span><span>${it.text}</span></li>`).join('')).join('');
+  $('wire').innerHTML=`<div class="card-head"><h2>Newswire</h2><span class="label">What happened</span></div><ul>${html||'<li><span class="dot"></span><span class="note">Nothing yet. Take an action or end the year to see how they respond.</span></li>'}</ul>`;
+}
+function renderOver(){
+  const o=$('over');if(!S.over){o.hidden=true;return}
+  o.hidden=false;
+  o.innerHTML=`<div class="box"><span class="label">${CFG.START_YEAR+S.turn}</span><h2 class="${S.over.win?'win':'lose'}">${S.over.title}</h2><p>${S.over.text}</p><p class="note">You lasted ${S.turn} years and killed ${S.kills} billionaire${S.kills===1?'':'s'}.</p><div class="act"><button class="btn" id="again">Play again</button><button class="btn ghost" id="look">Look at the board</button></div></div>`;
+}
+function render(){renderMeter();renderHud();renderMap();renderDossier();renderRoster();renderTarget();renderWire();renderOver()}
+
+document.addEventListener('click',e=>{
+  if(PB){if(e.target.closest('#pbSkip')){PB.skip=true;if(PB.timer)clearTimeout(PB.timer);finishYear()}return}
+  const t=e.target.closest('[data-c],[data-b],[data-nat],[data-conv],#endBtn,#taxBtn,#campBtn,#bcBtn,#killBtn,#again,#look');
+  if(!t)return;
+  if(t.dataset.c)S.sel=t.dataset.c;
+  else if(t.dataset.b)S.selB=t.dataset.b;
+  else if(t.dataset.nat)nationalise(S.sel,t.dataset.nat);
+  else if(t.dataset.conv)convert(S.selB,t.dataset.conv);
+  else if(t.id==='endBtn'){$('rules').open=false;playYear();return}
+  else if(t.id==='taxBtn')raiseTax(S.sel);
+  else if(t.id==='campBtn')campaign(S.sel);
+  else if(t.id==='bcBtn')broadcaster(S.sel);
+  else if(t.id==='killBtn')kill(S.selB);
+  else if(t.id==='again')newGame();
+  else if(t.id==='look'){$('over').hidden=true;return}
+  render();
+});
+document.addEventListener('keydown',e=>{
+  if(PB)return;
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const t=e.target.closest&&e.target.closest('[data-c],[data-b]');if(!t)return;
+  e.preventDefault();if(t.dataset.c)S.sel=t.dataset.c;else S.selB=t.dataset.b;render();
+});
+
+function start(data){if(data&&data.S&&data.S.v===4)S=data.S;else newGame();render()}
+window.claude?.hot?.snapshot?.(()=>({S}));
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+</script>
+
+</body>
+</html>
