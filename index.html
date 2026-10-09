@@ -171,6 +171,10 @@ body.playing .end{opacity:.4}
 .povbar{position:relative;width:140px;height:6px;background:var(--line);border-radius:2px;margin:3px 0}
 .povbar .fill{position:absolute;inset:0 auto 0 0;background:var(--danger);border-radius:2px}
 .povbar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(560px,calc(100% - 32px));background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 14px 44px color-mix(in oklab,var(--ink) 25%,transparent);padding:12px 16px;z-index:8;display:flex;gap:14px;align-items:center;animation:rise .25s ease-out}
+.toast-body{flex:1;min-width:0;display:grid;gap:4px}
+.toast p{margin:0;font-size:13.5px;padding-left:10px;border-left:3px solid var(--people)}
+.toast p.bad{border-color:var(--danger)}
 .rules summary{cursor:pointer;font-family:var(--display);font-size:20px;font-weight:800;text-transform:uppercase}
 .rules ul{margin:10px 0 0;padding-left:18px;display:grid;gap:5px;max-width:80ch}
 
@@ -238,6 +242,7 @@ body.playing .end{opacity:.4}
 </div>
 <div class="over" id="over" hidden></div>
 <div class="pb" id="pb" hidden aria-live="polite"></div>
+<div class="toast" id="toast" hidden role="status"></div>
 
 <script>
 // ENGINE START
@@ -257,7 +262,7 @@ const RELIGIONS=[
   {id:'chr',name:'Christianity',act:'Eye of the needle',base:.5,desc:'Gives away 6% of their wealth a year for 5 years, then the feeling fades.'},
   {id:'isl',name:'Islam',act:'Zakat',base:.45,desc:'Pays 2.5% of their wealth every year, for life.'},
   {id:'jud',name:'Judaism',act:'Tzedakah',base:.25,desc:'Gives 10% of their yearly income and stops lobbying, for life. Judaism doesn\'t seek converts, so this rarely works.'},
-  {id:'bud',name:'Buddhism',act:'Renunciation',base:.35,desc:'Gives away 40% of everything at once.'},
+  {id:'bud',name:'Buddhism',act:'Renunciation',base:.35,desc:'Gives away 40% of everything at once, then lives as a monk and takes no actions for 5 years.'},
 ];
 const BILLS=[
   {first:'Rex',last:'Vantor',biz:'Rockets & cars',sec:'Tech',home:'US',w:2.6},
@@ -364,7 +369,7 @@ function convert(bid,rid){
   if(S.over||b.faith||S.ap<CFG.CONVERT_COST)return false;
   S.ap-=CFG.CONVERT_COST;
   if(Math.random()<convChance(b,rid)){
-    if(rid==='bud'){const g=give(b,wealth(b)*.4);b.faith={rel:'bud',years:0,done:true};say(`${nameOf(b)} finds Buddhism and renounces ${fmt(g)} in one go.`,'you')}
+    if(rid==='bud'){const g=give(b,wealth(b)*.4);b.faith={rel:'bud',years:5,done:true};say(`${nameOf(b)} finds Buddhism, renounces ${fmt(g)} in one go and becomes a monk. No actions for 5 years.`,'you')}
     else{b.faith={rel:rid,years:rid==='chr'?5:0};say(`${nameOf(b)} converts to ${r.name}. ${r.act} begins.`,'you')}
   }else{b.resist=Math.min(.8,b.resist+.2);say(`${nameOf(b)} sits through the sermon on ${r.name} and leaves unmoved. They'll be harder to reach next time.`,'bad')}
   return true;
@@ -385,6 +390,7 @@ function kill(bid){
 }
 
 function richAction(b){
+  if(b.faith?.rel==='bud'&&b.faith.years>0){if(!b._medit){b._medit=true;say(`${nameOf(b)} meditates in a monastery. No action this year.`,'you')}return}
   if(b.veng>0&&!b._smeared){b._smeared=true;S.penalty++;say(`${nameOf(b)} funds a smear campaign against you. You lose 1 action next year.`,'bad');return}
   const flee=S.countries.filter(c=>c.tax>=fleeAt(c)&&hb(b,c.id)>.05).sort((a,z)=>hb(b,z.id)-hb(b,a.id))[0];
   if(flee){const m=toOffshore(b,flee.id,.6);say(`${nameOf(b)} moves ${fmt(m)} out of ${flee.name} to offshore accounts.`);return}
@@ -450,7 +456,8 @@ function endTurn(){
     b.cash=b.cash*(1+CFG.R_CASH)+profit;
     say(`Earns ${fmt(wealth(b)-w0)} from returns and rent.${pushed>=.5?` The rent pushes ~${Math.round(pushed)}M people into poverty.`:''}`);
     if(b.faith?.rel==='jud'){const g=give(b,profit*.1);say(`${nameOf(b)} gives ${fmt(g)} in tzedakah.`,'you')}
-    b._smeared=false;const n=actionsFor(b);for(let i=0;i<n;i++)richAction(b);if(b.veng>0)b.veng--;
+    b._smeared=false;b._medit=false;const n=actionsFor(b);for(let i=0;i<n;i++)richAction(b);if(b.veng>0)b.veng--;
+    if(b.faith?.rel==='bud'&&b.faith.years>0&&--b.faith.years===0){b.faith=null;b.resist=Math.min(.8,b.resist+.3);say(`${nameOf(b)} leaves the monastery and goes back to business.`,'bad')}
     stepEnd();
   });
   stepStart('The year ends',null,'you');
@@ -672,7 +679,7 @@ function renderTarget(){
   const w=wealth(b),kc=killCost(),canKill=S.ap>=kc&&!S.killed&&!S.over;
   const where=Object.keys(b.H).map(cid=>[C(cid).name,hb(b,cid)]).concat([['Offshore',b.cash]]).filter(([,v])=>v>.005).sort((a,z)=>z[1]-a[1]).slice(0,5)
     .map(([n,v])=>`<tr><td>${n}</td><td class="r num">${fmt(v)}</td></tr>`).join('');
-  const faith=b.faith?`<p class="note"><b>${R(b.faith.rel).name}:</b> ${b.faith.done?'already renounced 40% of their wealth.':b.faith.rel==='chr'?`giving 6% a year, ${b.faith.years} years left.`:R(b.faith.rel).desc}</p>`:'';
+  const faith=b.faith?`<p class="note"><b>${R(b.faith.rel).name}:</b> ${b.faith.rel==='bud'?`renounced 40% and lives as a monk: no actions for ${b.faith.years} more year${b.faith.years===1?'':'s'}.`:b.faith.rel==='chr'?`giving 6% a year, ${b.faith.years} years left.`:R(b.faith.rel).desc}</p>`:'';
   const rels=RELIGIONS.map(r=>{
     const ch=convChance(b,r.id),can=!b.faith&&S.ap>=CFG.CONVERT_COST&&!S.over;
     const lift={chr:`~${Math.round(w*.06*CFG.LIFT)}M a year`,isl:`~${Math.round(w*.025*CFG.LIFT)}M a year`,jud:`~${Math.round(w*CFG.R_COUNTRY*.1*CFG.LIFT)}M a year`,bud:`~${Math.round(w*.4*CFG.LIFT)}M at once`}[r.id];
@@ -696,17 +703,24 @@ function renderOver(){
   o.hidden=false;
   o.innerHTML=`<div class="box"><span class="label">${CFG.START_YEAR+S.turn}</span><h2 class="${S.over.win?'win':'lose'}">${S.over.title}</h2><p>${S.over.text}</p><p class="note">You lasted ${S.turn} years and killed ${S.kills} billionaire${S.kills===1?'':'s'}.</p><div class="act"><button class="btn" id="again">Play again</button><button class="btn ghost" id="look">Look at the board</button></div></div>`;
 }
+let TOAST_T=null;
+function toast(items,d){
+  const el=$('toast');if(!items.length)return;
+  el.innerHTML=`<div class="toast-body">${items.map(it=>`<p class="${it.kind}">${it.text}</p>`).join('')}</div><span class="delta big ${ppCls(d)}">${ppTxt(d)}</span>`;
+  el.hidden=false;clearTimeout(TOAST_T);TOAST_T=setTimeout(()=>{el.hidden=true},5000);
+}
 function render(){renderMeter();renderHud();renderMap();renderDossier();renderRoster();renderTarget();renderWire();renderOver()}
 
 document.addEventListener('click',e=>{
   if(PB){if(e.target.closest('#pbSkip')){PB.skip=true;if(PB.timer)clearTimeout(PB.timer);finishYear()}return}
   const t=e.target.closest('[data-c],[data-b],[data-nat],[data-conv],#endBtn,#taxBtn,#campBtn,#bcBtn,#killBtn,#again,#look');
   if(!t)return;
+  const s0=share(),n0=S.cur.length;
   if(t.dataset.c)S.sel=t.dataset.c;
   else if(t.dataset.b)S.selB=t.dataset.b;
   else if(t.dataset.nat)nationalise(S.sel,t.dataset.nat);
   else if(t.dataset.conv)convert(S.selB,t.dataset.conv);
-  else if(t.id==='endBtn'){$('rules').open=false;playYear();return}
+  else if(t.id==='endBtn'){$('rules').open=false;$('toast').hidden=true;playYear();return}
   else if(t.id==='taxBtn')raiseTax(S.sel);
   else if(t.id==='campBtn')campaign(S.sel);
   else if(t.id==='bcBtn')broadcaster(S.sel);
@@ -714,6 +728,7 @@ document.addEventListener('click',e=>{
   else if(t.id==='again')newGame();
   else if(t.id==='look'){$('over').hidden=true;return}
   render();
+  if(S.cur.length>n0)toast(S.cur.slice(n0),share()-s0);
 });
 document.addEventListener('keydown',e=>{
   if(PB)return;
