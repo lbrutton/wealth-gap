@@ -236,7 +236,7 @@ body.playing .end{opacity:.4}
       <li><b>Convert</b> (2 actions): each religion makes them give in a different way. The odds depend on how widespread the religion is in their home country. Every failed attempt makes them more resistant.</li>
       <li><b>Kill</b> (4 actions, +1 per kill, once a year): half their fortune goes to the people. An heir inherits the rest and spends 3 years smearing you. Everyone else panics and moves 30% offshore.</li>
       <li><b>Fight poverty</b> (doesn't move the wealth share): rich, non-right-leaning countries can fund <b>aid</b> (1 action a level, up to 3) that sends 0.4% of their wealth a year to poorer countries. Any country that isn't far right can build <b>free healthcare</b>, <b>education</b> or <b>public housing</b> (3 actions each). Services are safe for 3 years, then right-leaning governments can be lobbied to privatise them. Right-leaning donors get lobbied to cut aid.</li>
-      <li><b>Actions:</b> 6 a year, plus 1 for every 15M people pulled out of poverty that year (up to +5). Unused actions carry over, up to 15.</li>
+      <li><b>Actions:</b> 6 a year, plus 1 for every 40M people your ongoing policies (taxes, public companies, conversions, aid, services) lift out of poverty that year (up to +5). One-off seizures and kills don't count. Unused actions carry over, up to 15.</li>
       <li><b>Their turn:</b> each billionaire gets 1 action, more as they get richer. They buy assets, lobby taxes down, push privatisation, fund the far right or flee offshore. A country that is 50% owned by them is lost.</li>
     </ul>
   </details>
@@ -247,7 +247,7 @@ body.playing .end{opacity:.4}
 
 <script>
 // ENGINE START
-const CFG={R_COUNTRY:.05,R_CASH:.02,G:.02,RENT:.05,LIFT:100,PUSH:100,WIN:.12,LOSE:.35,LOCK:.5,MAX_TURNS:40,KILL_COST:4,KILL_ESC:1,KILL_LIFT:.4,NAT_LIFT:.5,NAT_MIN:2,NAT_BASE:1,NAT_COMP:0,NAT_LEAN:.3,NAT_BACKLASH:.06,BASE_AP:6,AP_CAP:15,START_YEAR:2026,FLEE_TAX:3,TAX_STEP:.03,CONVERT_COST:2,CAMPAIGN:.08,FAR_RIGHT:.07,MEDIA_PUSH:1,PROTECT:3,PUB_YIELD:.05,PUB_LIFT:.5,NAT_PER_T:1.5,BC_COST:2,BC_YEARS:5,AID_COST:1,AID_RATE:.004,AID_MAX:3,AID_LIFT:.6,AID_SAFE:2,SVC_CONTRACT:.01,BONUS_GROSS:0,BONUS_PER:15,BONUS_MAX:5};
+const CFG={R_COUNTRY:.05,R_CASH:.02,G:.02,RENT:.05,LIFT:100,PUSH:100,WIN:.12,LOSE:.35,LOCK:.5,MAX_TURNS:40,KILL_COST:4,KILL_ESC:1,KILL_LIFT:.4,NAT_LIFT:.5,NAT_MIN:2,NAT_BASE:1,NAT_COMP:0,NAT_LEAN:.3,NAT_BACKLASH:.06,BASE_AP:6,AP_CAP:15,START_YEAR:2026,FLEE_TAX:3,TAX_STEP:.03,CONVERT_COST:2,CAMPAIGN:.08,FAR_RIGHT:.07,MEDIA_PUSH:1,PROTECT:3,PUB_YIELD:.05,PUB_LIFT:.5,NAT_PER_T:1.5,BC_COST:2,BC_YEARS:5,AID_COST:1,AID_RATE:.004,AID_MAX:3,AID_LIFT:.6,AID_SAFE:2,SVC_CONTRACT:.01,BONUS_GROSS:1,BONUS_PER:40,BONUS_MAX:5};
 const SERVICES=[
   {id:'health',name:'Free healthcare',cost:3,rate:.05,desc:'Lifts 5% of the people still in poverty here every year.'},
   {id:'edu',name:'Free education',cost:3,rate:.03,lean:-.01,desc:'Lifts 3% of the people still in poverty here every year and slowly shifts politics left.'},
@@ -628,7 +628,7 @@ function finishYear(){
 }
 function renderHud(){
   const pips=Array.from({length:CFG.AP_CAP},(_,i)=>`<span class="pip${i<S.ap?'':' empty'}"></span>`).join('');
-  const last=S.turn?`+${CFG.BASE_AP} base, +${S.lastBonus} from poverty${S.lastPenalty?`, −${S.lastPenalty} smears`:''}`:`${CFG.BASE_AP} actions to start`;
+  const last=S.turn?`+${CFG.BASE_AP} base, +${S.lastBonus} from lifting people${S.lastPenalty?`, −${S.lastPenalty} smears`:''}`:`${CFG.BASE_AP} actions to start`;
   const rate=poorTotal()/popTotal(),rate0=S.poor0/popTotal(),scale=.25;
   const y=S.lastYr,you=y?y.tax+y.pub+y.nat+y.kill+y.faith+(y.aid||0)+(y.svc||0):0;
   const lastHtml=S.turn&&y?`<span class="num" style="color:${S.lastNet>=0?'var(--ok)':'var(--danger)'}">${S.lastNet>=0?'+':'−'}${Math.abs(Math.round(S.lastNet))}M lifted</span>
