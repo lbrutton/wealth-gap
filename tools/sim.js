@@ -16,15 +16,23 @@ const kil=()=>kill(richest().id);
 const nat=()=>{let best=null;S.countries.forEach(c=>{if(locked(c)||!natOK(c))return;SECTORS.forEach(s=>{if(c.pub[s])return;const a=heldSec(c,s),k=natCost(c,s);if(a>.05&&k<=S.ap&&(!best||a/k>best.v))best={c,s,v:a/k}})});if(best&&best.v>.15){nationalise(best.c.id,best.s);return true}return false};
 const conv=()=>{let best=null;S.bills.forEach(b=>{if(b.faith)return;RELIGIONS.forEach(r=>{const v=convChance(b,r.id)*wealth(b);if(!best||v>best.v)best={b,r,v}})});if(best&&S.ap>=CFG.CONVERT_COST&&best.v>.4){convert(best.b.id,best.r.id);return true}return false};
 const camp=()=>{const c=S.countries.filter(c=>!locked(c)&&c.lean>.2).sort((a,z)=>held(z)-held(a))[0];if(c&&S.ap>=1){campaign(c.id);return true}return false};
+const aid=()=>{const c=S.countries.filter(c=>donorOK(c)&&c.aid.lvl<CFG.AID_MAX).sort((a,z)=>z.P-a.P)[0];if(c&&S.ap>=CFG.AID_COST){fundAid(c.id);return true}return false};
+const svc=(ids=['health','edu','house'])=>{let best=null;S.countries.forEach(c=>{if(!svcOK(c))return;ids.forEach(k=>{if(c.svc[k]||S.ap<SV(k).cost)return;const v=SV(k).rate?c.poor*SV(k).rate:(c.lastPushed||0)*SV(k).shield;if(!best||v>best.v)best={c,k,v}})});if(best&&best.v>3){buildService(best.c.id,best.k);return true}return false};
+const pov=()=>{while(aid());while(svc());};
 const STRATS={
+
   passive:()=>{},
   killAndTax:()=>{if(S.ap>=killCost())kil();else if(S.turn%3!=0)tax(2)},
   nationaliseOnly:()=>{while(nat());},
   convertOnly:()=>{while(conv());},
   mixed:()=>{if(S.ap>=killCost()&&S.turn%2==0)kil();while(nat());while(conv());tax(2);camp()},
   nationaliseFirst:()=>{while(nat());if(S.ap>=killCost())kil();while(conv());camp();tax(2)},
+  povertyOnly:pov,
+  natFirstThenPoverty:()=>{STRATS0.nationaliseFirst();pov()},
+  povertyThenNat:()=>{if(S.turn<6)pov();else STRATS0.nationaliseFirst()},
   campaignToNationalise:()=>{const t=S.countries.filter(c=>!locked(c)&&!natOK(c)&&held(c)>1).sort((a,z)=>held(z)-held(a))[0];while(nat());if(S.ap>=killCost())kil();if(t)while(S.ap>=1&&!natOK(t))campaign(t.id);while(conv());tax(2)},
 };
+const STRATS0=STRATS;
 for(const [name,f] of Object.entries(STRATS)){
   const res={};let years=0;const mins=[];
   for(let i=0;i<GAMES;i++){const o=play(f);res[o.r]=(res[o.r]||0)+1;years+=o.t;mins.push(o.m)}
