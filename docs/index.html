@@ -247,7 +247,7 @@ body.playing .end{opacity:.4}
 
 <script>
 // ENGINE START
-const CFG={R_COUNTRY:.05,R_CASH:.02,G:.02,RENT:.05,LIFT:100,PUSH:100,WIN:.12,LOSE:.35,LOCK:.5,MAX_TURNS:40,KILL_COST:4,KILL_ESC:1,KILL_LIFT:.4,NAT_LIFT:.5,NAT_MIN:2,NAT_BASE:1,NAT_COMP:0,NAT_LEAN:.3,NAT_BACKLASH:.06,BASE_AP:6,AP_CAP:15,START_YEAR:2026,FLEE_TAX:3,TAX_STEP:.03,CONVERT_COST:2,CAMPAIGN:.08,FAR_RIGHT:.07,MEDIA_PUSH:1,PROTECT:3,PUB_YIELD:.05,PUB_LIFT:.5,NAT_PER_T:1.5,BC_COST:2,BC_YEARS:5,AID_COST:1,AID_RATE:.004,AID_MAX:3,AID_LIFT:.6,AID_SAFE:2,SVC_CONTRACT:.01,BONUS_GROSS:1,BONUS_PER:40,BONUS_MAX:5};
+const CFG={R_COUNTRY:.05,R_CASH:.02,G:.02,RENT:.05,LIFT:100,PUSH:100,WIN:.12,LOSE:.35,LOCK:.5,MAX_TURNS:40,KILL_COST:4,KILL_ESC:1,KILL_LIFT:.4,NAT_LIFT:.5,NAT_MIN:2,NAT_BASE:1,NAT_COMP:0,NAT_LEAN:.3,NAT_BACKLASH:.06,BASE_AP:6,AP_CAP:15,START_YEAR:2026,FLEE_TAX:3,TAX_STEP:.03,CONVERT_COST:2,CAMPAIGN:.08,FAR_RIGHT:.07,MEDIA_PUSH:1,PROTECT:3,PUB_YIELD:.05,PUB_LIFT:.5,NAT_PER_T:1.5,BC_COST:2,BC_YEARS:5,AID_COST:1,AID_RATE:.004,AID_MAX:3,AID_LIFT:.6,AID_SAFE:2,SVC_CONTRACT:.01,BONUS_GROSS:1,BONUS_PER:40,BONUS_MAX:5,POOR_MAX:.8};
 const SERVICES=[
   {id:'health',name:'Free healthcare',cost:3,rate:.05,desc:'Lifts 5% of the people still in poverty here every year.'},
   {id:'edu',name:'Free education',cost:3,rate:.03,lean:-.01,desc:'Lifts 3% of the people still in poverty here every year and slowly shifts politics left.'},
@@ -511,8 +511,8 @@ function endTurn(){
   say(`The people's economy grows ${CFG.G*100}%.`,'you');
   let net=0;
   S.countries.forEach(c=>{
-    c.P*=1+CFG.G;const lift=Math.min(c.lifted,c.poor+c.pushed);c.poor=Math.max(0,c.poor-lift+c.pushed);
-    const d=lift-c.pushed;net+=d;c.lean=clampLean(c.lean+(d>1?-.01:d<-1?.01:0));c.lastPushed=c.pushed;c.lifted=0;c.pushed=0;
+    c.P*=1+CFG.G;const lift=Math.min(c.lifted,c.poor+c.pushed),before=c.poor;c.poor=Math.min(c.pop*CFG.POOR_MAX,Math.max(0,c.poor-lift+c.pushed));
+    const d=before-c.poor;net+=d;c.lean=clampLean(c.lean+(d>1?-.01:d<-1?.01:0));c.lastPushed=c.pushed;c.lifted=0;c.pushed=0;
   });
   S.countries.forEach(c=>{if(c.bc>0){c.bc--;if(!c.bc)say(`The public broadcaster in ${c.name} loses its funding.`,'bad')}});
   S.lastNet=net;S.lastYr=S.yr;S.yr=newYr();
