@@ -230,7 +230,7 @@ body.playing .end{opacity:.4}
       <li><b>Poverty:</b> everything that moves money to the people (taxes, public companies, conversions, kills) lifts people out of poverty, about 100M per $1T. Their rent pushes people back in. Each estimate is shown next to its button.</li>
       <li><b>Goal:</b> push the top 10's share of world wealth down to <b>12%</b>. At <b>35%</b> they own the world and you lose. Hold out 40 years for a draw.</li>
       <li><b>Their money grows on its own:</b> 5% a year on assets they own in countries, plus rent from the people. Owning housing doubles the rent. Cash parked offshore grows at only 2%.</li>
-      <li><b>Politics</b> sets your costs. Left-leaning countries make taxing and nationalising cheaper, but the rich flee them sooner. Right-leaning countries cost more, and the rich lobby them more easily. Billionaires who own media push their country to the right every year. <b>Campaign</b> (1 action) shifts a country left. A <b>public broadcaster</b> (2 actions) stops their media pushing a country right for 5 years.</li>
+      <li><b>Politics</b> sets your costs. Left-leaning countries make taxing and nationalising cheaper, but the rich flee them sooner. Right-leaning countries cost more, and the rich lobby them more easily. Billionaires who own media push their country to the right every year. Poverty matters too: every year, countries where poverty has risen since the start drift right, and countries where it has fallen drift left. <b>Campaign</b> (1 action) shifts a country left. A <b>public broadcaster</b> (2 actions) stops their media pushing a country right for 5 years.</li>
       <li><b>Wealth tax:</b> each level takes 3% a year of their holdings in that country. At 9% (6% in left-leaning countries) they move their money offshore.</li>
       <li><b>Make public</b> (needs a centrist or left-leaning country; bigger sectors cost more, about 1.5 actions per $1T): seize every billionaire asset in one sector of one country. The backlash pushes the country a little to the right. Public companies pay 5% a year in profits to the people. The sector is safe for 3 years. After that they can lobby a right-leaning government to privatise it, and that rarely works. Everyone else moves 20% of their money in that country offshore.</li>
       <li><b>Convert</b> (2 actions): each religion makes them give in a different way. The odds depend on how widespread the religion is in their home country. Every failed attempt makes them more resistant.</li>
@@ -247,7 +247,7 @@ body.playing .end{opacity:.4}
 
 <script>
 // ENGINE START
-const CFG={R_COUNTRY:.05,R_CASH:.02,G:.02,RENT:.05,LIFT:100,PUSH:100,WIN:.12,LOSE:.35,LOCK:.5,MAX_TURNS:40,KILL_COST:4,KILL_ESC:1,KILL_LIFT:.4,NAT_LIFT:.5,NAT_MIN:2,NAT_BASE:1,NAT_COMP:0,NAT_LEAN:.3,NAT_BACKLASH:.06,BASE_AP:6,AP_CAP:15,START_YEAR:2026,FLEE_TAX:3,TAX_STEP:.03,CONVERT_COST:2,CAMPAIGN:.08,FAR_RIGHT:.07,MEDIA_PUSH:1,PROTECT:3,PUB_YIELD:.05,PUB_LIFT:.5,NAT_PER_T:1.5,BC_COST:2,BC_YEARS:5,AID_COST:1,AID_RATE:.004,AID_MAX:3,AID_LIFT:.6,AID_SAFE:2,SVC_CONTRACT:.01,BONUS_GROSS:1,BONUS_PER:40,BONUS_MAX:5,POOR_MAX:.8};
+const CFG={R_COUNTRY:.05,R_CASH:.02,G:.02,RENT:.05,LIFT:100,PUSH:100,WIN:.12,LOSE:.35,LOCK:.5,MAX_TURNS:40,KILL_COST:4,KILL_ESC:1,KILL_LIFT:.4,NAT_LIFT:.5,NAT_MIN:2,NAT_BASE:1,NAT_COMP:0,NAT_LEAN:.3,NAT_BACKLASH:.06,BASE_AP:6,AP_CAP:15,START_YEAR:2026,FLEE_TAX:3,TAX_STEP:.03,CONVERT_COST:2,CAMPAIGN:.08,FAR_RIGHT:.07,MEDIA_PUSH:1,PROTECT:3,PUB_YIELD:.05,PUB_LIFT:.5,NAT_PER_T:1.5,BC_COST:2,BC_YEARS:5,AID_COST:1,AID_RATE:.004,AID_MAX:3,AID_LIFT:.6,AID_SAFE:2,SVC_CONTRACT:.01,BONUS_GROSS:1,BONUS_PER:40,BONUS_MAX:5,POOR_MAX:.8,POV_K:1,POV_MAX:.04};
 const SERVICES=[
   {id:'health',name:'Free healthcare',cost:3,rate:.05,desc:'Lifts 5% of the people still in poverty here every year.'},
   {id:'edu',name:'Free education',cost:3,rate:.03,lean:-.01,desc:'Lifts 3% of the people still in poverty here every year and slowly shifts politics left.'},
@@ -289,7 +289,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 let S;
 
 function newGame(){
-  const countries=COUNTRIES.map(c=>({...c,rel:{...c.rel},tax:0,lifted:0,pushed:0,pub:{},bc:0,svc:{},aid:{lvl:0,since:0}}));
+  const countries=COUNTRIES.map(c=>({...c,rel:{...c.rel},tax:0,lifted:0,pushed:0,poor0:c.poor,pub:{},bc:0,svc:{},aid:{lvl:0,since:0}}));
   const P=id=>countries.find(c=>c.id===id).P;
   const bills=BILLS.map((b,i)=>{
     const H={};
@@ -343,6 +343,8 @@ const donorOK=c=>!locked(c)&&c.lean<CFG.NAT_LEAN&&perCap(c)>avgCap();
 const aidAmt=c=>c.P*CFG.AID_RATE*c.aid.lvl;
 const aidLiftEst=c=>{const rs=S.countries.filter(o=>o!==c&&perCap(o)<avgCap());return rs.length?c.P*CFG.AID_RATE*CFG.LIFT*CFG.AID_LIFT:0};
 const svcOK=c=>!locked(c)&&c.lean<.5;
+const povRate=c=>c.poor/c.pop;
+const povDrift=c=>Math.max(-CFG.POV_MAX,Math.min(CFG.POV_MAX,(c.poor-c.poor0)/c.pop*CFG.POV_K));
 const clampLean=v=>Math.max(-1,Math.min(1,v));
 function scaleH(b,cid,f){const h=b.H[cid];if(!h)return 0;let m=0;for(const s in h){const d=h[s]*f;h[s]-=d;m+=d}return m}
 function toOffshore(b,cid,f){const m=scaleH(b,cid,f);b.cash+=m;return m}
@@ -512,7 +514,7 @@ function endTurn(){
   let net=0;
   S.countries.forEach(c=>{
     c.P*=1+CFG.G;const lift=Math.min(c.lifted,c.poor+c.pushed),before=c.poor;c.poor=Math.min(c.pop*CFG.POOR_MAX,Math.max(0,c.poor-lift+c.pushed));
-    const d=before-c.poor;net+=d;c.lean=clampLean(c.lean+(d>1?-.01:d<-1?.01:0));c.lastPushed=c.pushed;c.lifted=0;c.pushed=0;
+    const d=before-c.poor;net+=d;c.lean=clampLean(c.lean+povDrift(c));c.lastPushed=c.pushed;c.lifted=0;c.pushed=0;
   });
   S.countries.forEach(c=>{if(c.bc>0){c.bc--;if(!c.bc)say(`The public broadcaster in ${c.name} loses its funding.`,'bad')}});
   S.lastNet=net;S.lastYr=S.yr;S.yr=newYr();
@@ -679,6 +681,7 @@ function renderDossier(){
     fleeAt(c)<CFG.FLEE_TAX?`<span class="mod bad">Rich flee at ${taxPct(fleeAt(c))}% tax</span>`:`<span class="mod">Rich flee at ${taxPct(fleeAt(c))}% tax</span>`,
     c.lean>0?`<span class="mod bad">Lobbying easier</span>`:'',
     natOK(c)?`<span class="mod good">Can make sectors public</span>`:`<span class="mod bad">Too far right to make sectors public: campaign left ${campaignsNeeded(c)}× to unlock</span>`,
+    Math.abs(povDrift(c))>=.002?`<span class="mod ${povDrift(c)>0?'bad':'good'}">${povDrift(c)>0?'Rising poverty pushes it right':'Falling poverty pulls it left'}</span>`:'',
     c.bc>0?`<span class="mod good">Public broadcaster: ${c.bc} yr${c.bc>1?'s':''} left</span>`:heldSec(c,'Media')>.01?`<span class="mod bad">Their media pushes right</span>`:''
   ].join('');
   const secRows=SECTORS.map(s=>{
